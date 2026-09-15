@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+
+# env (含敏感信息，禁止入库)
+.env
+.env.local
+
+# sqlite database files (运行时生成)
+*.sqlite
+*.sqlite3
+*.db
+
+# logs
+*.log
+npm-debug.log*
+
+# os
+.DS_Store
+
+# editor
+.vscode/
+
+# lint cache
+.eslintcache
