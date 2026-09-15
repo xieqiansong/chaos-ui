@@ -8,6 +8,7 @@ import UserFormDialog from '@/components/UserFormDialog.vue'
 import DictTag from '@/components/DictTag.vue'
 import { useDictStore } from '@/stores/dict'
 import { confirm, showSuccess } from '@/utils/message'
+import { Setting } from '@element-plus/icons-vue'
 
 const dictStore = useDictStore()
 
@@ -21,6 +22,14 @@ const error = ref<string | null>(null)
 // 删除中状态：用于按钮 loading 防重复点击（整批 / 单行）
 const deleting = ref(false)
 const deletingId = ref<number | null>(null)
+
+// 列显示 / 隐藏控制：可被勾选显隐的可选列
+const optionalColumns = [
+  { key: 'nickname', label: '昵称' },
+  { key: 'email', label: '邮箱' },
+  { key: 'createdAt', label: '创建时间' },
+]
+const visibleColumns = ref(['nickname', 'email', 'createdAt'])
 
 const form = reactive<UserQuery>({
   username: '',
@@ -213,6 +222,15 @@ onMounted(load)
         >
           批量删除（{{ selectedRows.length }}）
         </el-button>
+        <!-- 列显示 / 隐藏控制 -->
+        <el-popover title="列设置" placement="bottom" :width="160" trigger="click">
+          <template #reference>
+            <el-button :icon="Setting">列设置</el-button>
+          </template>
+          <el-checkbox-group v-model="visibleColumns">
+            <el-checkbox v-for="c in optionalColumns" :key="c.key" :value="c.key" :label="c.label" />
+          </el-checkbox-group>
+        </el-popover>
       </div>
 
       <!-- 加载 / 空 / 错误 三态：v-loading 覆盖整个表格区 -->
@@ -235,21 +253,56 @@ onMounted(load)
           v-else-if="list.length > 0"
           ref="tableRef"
           :data="list"
+          row-key="id"
           border
           style="width: 100%"
           @selection-change="handleSelectionChange"
         >
+          <!-- 行展开：展示用户明细（el-descriptions） -->
+          <el-table-column type="expand" width="50">
+            <template #default="{ row }">
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item label="用户ID">{{ row.id }}</el-descriptions-item>
+                <el-descriptions-item label="用户名">{{ row.username }}</el-descriptions-item>
+                <el-descriptions-item label="昵称">{{ row.nickname }}</el-descriptions-item>
+                <el-descriptions-item label="邮箱">{{ row.email || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="状态">
+                  <DictTag dict="user-status" :value="row.enabled ? 1 : 0" />
+                </el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ formatDateTime(row.createdAt) }}</el-descriptions-item>
+                <el-descriptions-item label="更新时间">{{ formatDateTime(row.updatedAt) }}</el-descriptions-item>
+              </el-descriptions>
+            </template>
+          </el-table-column>
+
           <el-table-column type="selection" width="55" />
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" />
-          <el-table-column prop="nickname" label="昵称" />
-          <el-table-column prop="email" label="邮箱" />
+          <!-- 排序：客户端排序（sortable） -->
+          <el-table-column prop="id" label="ID" width="80" sortable />
+          <el-table-column prop="username" label="用户名" min-width="120" />
+          <el-table-column
+            v-if="visibleColumns.includes('nickname')"
+            prop="nickname"
+            label="昵称"
+            min-width="120"
+          />
+          <el-table-column
+            v-if="visibleColumns.includes('email')"
+            prop="email"
+            label="邮箱"
+            min-width="180"
+            show-overflow-tooltip
+          />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <DictTag dict="user-status" :value="row.enabled ? 1 : 0" />
             </template>
           </el-table-column>
-          <el-table-column label="创建时间">
+          <el-table-column
+            v-if="visibleColumns.includes('createdAt')"
+            label="创建时间"
+            width="180"
+            sortable
+          >
             <template #default="{ row }">
               {{ formatDateTime(row.createdAt) }}
             </template>
