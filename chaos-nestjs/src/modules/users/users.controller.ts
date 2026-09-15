@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } 
 import { UsersService } from './users.service'
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto'
 import { UserQueryDto } from './dto/user-query.dto'
+import { BatchDeleteDto } from './dto/batch-delete.dto'
 
 @Controller('users')
 export class UsersController {
@@ -30,5 +31,10 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id)
+  }
+
+  @Delete()
+  removeMany(@Body() dto: BatchDeleteDto) {
+    return this.usersService.removeMany(dto.ids)
   }
 }

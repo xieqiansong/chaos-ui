@@ -60,4 +60,10 @@ export class UsersService {
     await this.findOne(id)
     await this.userRepository.delete(id)
   }
+
+  async removeMany(ids: number[]): Promise<{ deleted: number }> {
+    if (!ids.length) return { deleted: 0 }
+    const result = await this.userRepository.delete(ids)
+    return { deleted: result.affected ?? 0 }
+  }
 }

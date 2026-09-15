@@ -4,8 +4,9 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios'
+import { ElMessage } from 'element-plus'
 
-/** 后端接口返回的统一结构（按实际后端调整） */
+/** 后端接口返回的统一结构（按 chaos-nestjs 约定：code === 0 成功） */
 export interface ApiResponse<T = unknown> {
   code: number
   message: string
@@ -40,7 +41,7 @@ request.interceptors.response.use(
     const res = response.data
     // 约定 code === 0 为成功；按实际后端调整
     if (res && typeof res.code === 'number' && res.code !== 0) {
-      console.error('[request]', res.message)
+      ElMessage.error(res.message || '请求失败')
       return Promise.reject(new Error(res.message || '请求失败'))
     }
     return response
@@ -48,15 +49,22 @@ request.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      // 未授权：跳转到登录页（待接入真实登录路由）
+      ElMessage.error('登录已过期，请重新登录')
+      // 未授权：跳转到登录页（待接入真实登录路由，见示例 #6）
       window.location.href = '/login'
+    } else if (error.response) {
+      // 服务端有响应但非 2xx
+      ElMessage.error(`请求失败（${error.response.status}）`)
+    } else if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时，请稍后重试')
+    } else {
+      ElMessage.error('网络错误，请检查连接')
     }
-    console.error('[request]', error.message)
     return Promise.reject(error)
   },
 )
 
-/** 泛型封装：直接返回 data 业务字段 */
+/** 泛型封装：直接返回 data 业务字段（已剥离 AxiosResponse 与统一结构外层） */
 export function get<T = unknown>(url: string, config?: AxiosRequestConfig) {
   return request.get<ApiResponse<T>>(url, config).then((r) => r.data.data)
 }

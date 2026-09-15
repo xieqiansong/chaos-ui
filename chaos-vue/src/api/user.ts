@@ -31,3 +31,8 @@ export function updateUser(id: number, payload: UpdateUserPayload): Promise<User
 export function deleteUser(id: number): Promise<void> {
   return del<void>(`/users/${id}`)
 }
+
+/** 批量删除用户：DELETE /api/users，body { ids: number[] } */
+export function batchDeleteUsers(ids: number[]): Promise<{ deleted: number }> {
+  return del<{ deleted: number }>('/users', { data: { ids } })
+}

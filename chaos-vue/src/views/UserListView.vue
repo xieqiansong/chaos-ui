@@ -3,7 +3,7 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { User, UserQuery } from '@/types/user'
 import type { PageResult } from '@/types/pagination'
-import { deleteUser, fetchUsers } from '@/api/user'
+import { batchDeleteUsers, deleteUser, fetchUsers } from '@/api/user'
 import { formatDateTime } from '@/utils/format'
 import UserFormDialog from '@/components/UserFormDialog.vue'
 
@@ -101,6 +101,38 @@ async function handleDelete(row: User) {
   }
   await deleteUser(row.id)
   ElMessage.success('删除成功')
+  // 若删完当前页只剩这一条且不是第一页，回退一页
+  if (list.value.length === 1 && page.value > 1) {
+    page.value -= 1
+  }
+  load()
+}
+
+// 批量删除：收集选中行，调用批量接口
+const tableRef = ref()
+const selectedRows = ref<User[]>([])
+
+function handleSelectionChange(rows: User[]) {
+  selectedRows.value = rows
+}
+
+async function handleBatchDelete() {
+  const ids = selectedRows.value.map((r) => r.id)
+  if (!ids.length) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个用户吗？`, '提示', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  const { deleted } = await batchDeleteUsers(ids)
+  ElMessage.success(`已删除 ${deleted} 条`)
+  // 若删空了当前页且不是第一页，回退一页
+  if (list.value.length === ids.length && page.value > 1) {
+    page.value -= 1
+  }
+  tableRef.value?.clearSelection()
   load()
 }
 
@@ -149,8 +181,23 @@ onMounted(load)
     <el-card class="table-card" shadow="never">
       <div class="toolbar">
         <el-button type="primary" @click="openAdd">新增用户</el-button>
+        <el-button
+          type="danger"
+          :disabled="selectedRows.length === 0"
+          @click="handleBatchDelete"
+        >
+          批量删除（{{ selectedRows.length }}）
+        </el-button>
       </div>
-      <el-table v-loading="loading" :data="list" border style="width: 100%">
+      <el-table
+        ref="tableRef"
+        v-loading="loading"
+        :data="list"
+        border
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="nickname" label="昵称" />
