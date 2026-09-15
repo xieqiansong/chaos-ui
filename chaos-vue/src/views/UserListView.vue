@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { User, UserQuery } from '@/types/user'
 import type { PageResult } from '@/types/pagination'
 import { batchDeleteUsers, deleteUser, fetchUsers } from '@/api/user'
@@ -7,10 +7,14 @@ import { formatDateTime } from '@/utils/format'
 import UserFormDialog from '@/components/UserFormDialog.vue'
 import DictTag from '@/components/DictTag.vue'
 import { useDictStore } from '@/stores/dict'
-import { confirm, showSuccess } from '@/utils/message'
-import { Setting } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { confirm, showError, showSuccess } from '@/utils/message'
+import request from '@/utils/request'
+import * as XLSX from 'xlsx'
+import { Download, Setting, Upload } from '@element-plus/icons-vue'
 
 const dictStore = useDictStore()
+const userStore = useUserStore()
 
 const loading = ref(false)
 const list = ref<User[]>([])
@@ -163,6 +167,93 @@ async function handleBatchDelete() {
   }
 }
 
+// ---------- 导出 / 导入（#13） ----------
+// 通用：触发浏览器下载一个 Blob
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// 1) 前端导出：用 xlsx 直接把当前列表拼成 Excel 并下载（不走后端）
+const exportingClient = ref(false)
+function exportClient() {
+  exportingClient.value = true
+  try {
+    const rows = list.value.map((u) => ({
+      用户ID: u.id,
+      用户名: u.username,
+      昵称: u.nickname,
+      邮箱: u.email ?? '',
+      状态: u.enabled ? '启用' : '禁用',
+      创建时间: formatDateTime(u.createdAt),
+      更新时间: formatDateTime(u.updatedAt),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '用户')
+    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+    downloadBlob(
+      new Blob([buf], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+      `用户数据_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    )
+  } finally {
+    exportingClient.value = false
+  }
+}
+
+// 2) 后端导出：请求返回 blob，前端直接下载（演示「后端导出 + blob 下载」）
+const exportingServer = ref(false)
+async function exportServer() {
+  exportingServer.value = true
+  try {
+    const res = await request.get('/users/export', { responseType: 'blob' })
+    const blob = res.data as Blob
+    const cd = (res.headers['content-disposition'] as string) || ''
+    const nameMatch = cd.match(/filename="?([^"]+)"?/)
+    const filename = nameMatch?.[1] || `用户数据_${new Date().toISOString().slice(0, 10)}.xlsx`
+    downloadBlob(blob, filename)
+  } catch {
+    // 拦截器已提示
+  } finally {
+    exportingServer.value = false
+  }
+}
+
+// 3) 导入：上传 xlsx，后端解析落库（el-upload 直接 POST 到后端，需带 token）
+const importUrl = '/api/users/import'
+const importHeaders = computed(() => ({ Authorization: `Bearer ${userStore.token}` }))
+
+function beforeImportUpload(file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (ext !== 'xlsx' && ext !== 'xls') {
+    showError('仅支持 .xlsx / .xls 文件')
+    return false
+  }
+  if (file.size / 1024 / 1024 > 5) {
+    showError('文件不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+function handleImportSuccess(
+  res: { data?: { imported?: number; skipped?: number } },
+) {
+  const d = res?.data
+  showSuccess(`导入完成：新增 ${d?.imported ?? 0}，跳过 ${d?.skipped ?? 0}`)
+  load()
+}
+
+function handleImportError() {
+  showError('导入失败，请检查文件格式')
+}
+
 onMounted(load)
 </script>
 
@@ -222,6 +313,24 @@ onMounted(load)
         >
           批量删除（{{ selectedRows.length }}）
         </el-button>
+        <!-- 导出 / 导入（#13） -->
+        <el-button :icon="Download" :loading="exportingClient" @click="exportClient">
+          导出 Excel（前端）
+        </el-button>
+        <el-button :icon="Download" :loading="exportingServer" @click="exportServer">
+          导出（后端）
+        </el-button>
+        <el-upload
+          :action="importUrl"
+          :headers="importHeaders"
+          accept=".xlsx,.xls"
+          :show-file-list="false"
+          :before-upload="beforeImportUpload"
+          :on-success="handleImportSuccess"
+          :on-error="handleImportError"
+        >
+          <el-button :icon="Upload">导入</el-button>
+        </el-upload>
         <!-- 列显示 / 隐藏控制 -->
         <el-popover title="列设置" placement="bottom" :width="160" trigger="click">
           <template #reference>

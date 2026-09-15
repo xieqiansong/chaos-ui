@@ -24,6 +24,7 @@
     "class-validator": "^0.14.1",
     "express": "^5.0.0",
     "multer": "^2.0.0",
+    "xlsx": "^0.18.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.20"
