@@ -1,9 +1,23 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common'
 import { UsersService } from './users.service'
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto'
 import { UserQueryDto } from './dto/user-query.dto'
 import { BatchDeleteDto } from './dto/batch-delete.dto'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
+// 用户管理接口需登录：校验 Authorization: Bearer <token>
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

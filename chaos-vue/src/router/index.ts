@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import Layout from '@/layout/AppLayout.vue'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -10,6 +11,8 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '登录',
       hidden: true,
+      // 白名单：显式声明为公开路由；其余路由默认均需登录（安全优先）
+      public: true,
     },
   },
   {
@@ -28,7 +31,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '仪表盘',
           icon: 'Odometer',
-          requiresAuth: false,
         },
       },
       {
@@ -38,7 +40,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '关于',
           icon: 'InfoFilled',
-          requiresAuth: false,
         },
       },
       {
@@ -48,7 +49,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '用户管理',
           icon: 'User',
-          requiresAuth: false,
         },
       },
     ],
@@ -65,9 +65,19 @@ router.beforeEach((to) => {
   // 设置页面标题
   document.title = (to.meta.title as string) || 'Chaos UI'
 
-  // 登录校验（占位实现，待接入真实鉴权 store）
-  if (to.meta.requiresAuth && !localStorage.getItem('token')) {
-    return { path: '/login' }
+  // 登录校验：读取用户 store 中的 token（与 localStorage 同步）
+  const userStore = useUserStore()
+  const loggedIn = !!userStore.token
+
+  // 白名单模式：仅 public 路由可免登录访问，其余默认需登录（缺 token 跳登录页并记来源）
+  const isPublic = to.matched.some((r) => r.meta.public)
+  if (!isPublic && !loggedIn) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+
+  // 已登录再访问登录页：直接进首页（或登录前想去的页面）
+  if (to.path === '/login' && loggedIn) {
+    return { path: (to.query.redirect as string) || '/' }
   }
 })
 

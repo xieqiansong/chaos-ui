@@ -5,6 +5,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '@/router'
 
 /** 后端接口返回的统一结构（按 chaos-nestjs 约定：code === 0 成功） */
 export interface ApiResponse<T = unknown> {
@@ -50,8 +51,10 @@ request.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       ElMessage.error('登录已过期，请重新登录')
-      // 未授权：跳转到登录页（待接入真实登录路由，见示例 #6）
-      window.location.href = '/login'
+      // 未授权：清空 token 后跳转登录页（SPA 导航，避免整页刷新）
+      if (router.currentRoute.value.path !== '/login') {
+        router.push('/login')
+      }
     } else if (error.response) {
       // 服务端有响应但非 2xx
       ElMessage.error(`请求失败（${error.response.status}）`)

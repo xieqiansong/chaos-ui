@@ -1,4 +1,10 @@
-import type { CreateUserPayload, PageResult, UpdateUserPayload, User, UserQuery } from '@/types/user'
+import type {
+  CreateUserPayload,
+  UpdateUserPayload,
+  User,
+  UserQuery,
+} from '@/types/user'
+import type { PageResult } from '@/types/pagination'
 import { del, get, post, put } from '@/utils/request'
 
 /**

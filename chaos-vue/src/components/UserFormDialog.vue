@@ -72,7 +72,8 @@ async function handleSubmit() {
   loading.value = true
   try {
     // 邮箱为空时不提交该字段，避免触发后端 @IsEmail 校验
-    const email = form.email.trim() === '' ? undefined : form.email.trim()
+    const rawEmail = form.email ?? ''
+    const email = rawEmail.trim() === '' ? undefined : rawEmail.trim()
     if (isEdit.value && props.userId !== null) {
       const payload: UpdateUserPayload = { nickname: form.nickname.trim(), enabled: form.enabled, email }
       await updateUser(props.userId, payload)

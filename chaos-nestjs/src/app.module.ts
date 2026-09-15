@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { UsersModule } from './modules/users/users.module'
+import { AuthModule } from './modules/auth/auth.module'
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UsersModule } from './modules/users/users.module'
       synchronize: true, // 学习项目：根据实体自动建表；生产环境应改为迁移
     }),
     UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

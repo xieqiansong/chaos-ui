@@ -36,6 +36,18 @@ npm run start:dev      # http://localhost:30048/api
 | PUT | `/api/users/:id` | 修改 |
 | DELETE | `/api/users/:id` | 删除 |
 
+## 示例接口（auth 模块）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/auth/login` | 登录：入参 `{ username, password }`，返回 `{ token, user }` |
+| GET | `/api/auth/profile` | 当前用户信息（需 `Authorization: Bearer <token>`，演示路由守卫） |
+
+- 演示账号：`admin` / `admin123`（库内无用户时由 `AuthService.onModuleInit` 自动种入）。
+- 密码以 scrypt 哈希存储（`salt:hash` 格式，见 `common/auth/password`），token 为内置 HS256 JWT（`common/auth/jwt`，密钥取 `JWT_SECRET`，缺省开发默认值）。
+- `users` 模块已挂 `JwtAuthGuard`，需登录后携带 token 方可访问；401 经全局 `AllExceptionsFilter` 包成统一结构 `{ code, message, data: null }`。
+- 前端 `chaos-vue` 的 `src/api/auth.ts` 已对接本模块 `/auth/login`。
+
 ## 目录结构
 
 ```
