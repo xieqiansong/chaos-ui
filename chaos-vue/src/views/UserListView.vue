@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { User, UserQuery } from '@/types/user'
 import type { PageResult } from '@/types/pagination'
-import { fetchUsers } from '@/api/user'
+import { deleteUser, fetchUsers } from '@/api/user'
+import { formatDateTime } from '@/utils/format'
+import UserFormDialog from '@/components/UserFormDialog.vue'
 
 const loading = ref(false)
 const list = ref<User[]>([])
@@ -70,8 +73,35 @@ function handleSizeChange(s: number) {
   load()
 }
 
-function statusText(s: number) {
-  return s === 1 ? '启用' : '禁用'
+function enabledText(enabled: boolean) {
+  return enabled ? '启用' : '禁用'
+}
+
+// 新增 / 编辑弹窗
+const dialogVisible = ref(false)
+const editingId = ref<number | null>(null)
+
+function openAdd() {
+  editingId.value = null
+  dialogVisible.value = true
+}
+
+function openEdit(id: number) {
+  editingId.value = id
+  dialogVisible.value = true
+}
+
+async function handleDelete(row: User) {
+  try {
+    await ElMessageBox.confirm(`确定删除用户「${row.username}」吗？`, '提示', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  await deleteUser(row.id)
+  ElMessage.success('删除成功')
+  load()
 }
 
 onMounted(load)
@@ -117,20 +147,28 @@ onMounted(load)
 
     <!-- 表格 + 分页 -->
     <el-card class="table-card" shadow="never">
+      <div class="toolbar">
+        <el-button type="primary" @click="openAdd">新增用户</el-button>
+      </div>
       <el-table v-loading="loading" :data="list" border style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="nickname" label="昵称" />
         <el-table-column prop="email" label="邮箱" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">{{ statusText(row.status) }}</el-tag>
+            <el-tag :type="row.enabled ? 'success' : 'info'">{{ enabledText(row.enabled) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" />
+        <el-table-column label="创建时间">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
-          <template #default>
-            <el-button link type="primary" size="small">编辑</el-button>
-            <el-button link type="danger" size="small">删除</el-button>
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="openEdit(row.id)">编辑</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -147,6 +185,8 @@ onMounted(load)
         />
       </div>
     </el-card>
+
+    <UserFormDialog v-model="dialogVisible" :user-id="editingId" @saved="load" />
   </div>
 </template>
 
@@ -156,6 +196,9 @@ onMounted(load)
   font-size: 20px;
 }
 .search-card {
+  margin-bottom: 16px;
+}
+.toolbar {
   margin-bottom: 16px;
 }
 .pager {
