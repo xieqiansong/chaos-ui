@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { createUser, getUser, updateUser } from '@/api/user'
 import type { CreateUserPayload, UpdateUserPayload } from '@/types/user'
+import { showSuccess } from '@/utils/message'
 
 const props = defineProps<{
   modelValue: boolean
@@ -77,7 +78,7 @@ async function handleSubmit() {
     if (isEdit.value && props.userId !== null) {
       const payload: UpdateUserPayload = { nickname: form.nickname.trim(), enabled: form.enabled, email }
       await updateUser(props.userId, payload)
-      ElMessage.success('更新成功')
+      showSuccess('更新成功')
     } else {
       const payload: CreateUserPayload = {
         username: form.username.trim(),
@@ -86,7 +87,7 @@ async function handleSubmit() {
         email,
       }
       await createUser(payload)
-      ElMessage.success('新增成功')
+      showSuccess('新增成功')
     }
     visible.value = false
     emit('saved')

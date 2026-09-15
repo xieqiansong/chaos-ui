@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { showError, showSuccess } from '@/utils/message'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -31,12 +32,12 @@ async function onSubmit() {
   loading.value = true
   try {
     await userStore.login({ username: form.username, password: form.password })
-    ElMessage.success('登录成功')
+    showSuccess('登录成功')
     // 回跳登录前想访问的页面，缺省进首页
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (err) {
-    ElMessage.error((err as Error).message || '登录失败')
+    showError((err as Error).message || '登录失败')
   } finally {
     loading.value = false
   }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
 import { ArrowDown, SwitchButton, User } from '@element-plus/icons-vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppBreadcrumb from './components/AppBreadcrumb.vue'
 import { useUserStore } from '@/stores/user'
+import { confirm } from '@/utils/message'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -17,7 +17,7 @@ const username = computed(
 /** 退出登录：二次确认 → 清空 token → 跳登录页 */
 async function onLogout() {
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    await confirm('确定要退出登录吗？', {
       type: 'warning',
       confirmButtonText: '退出',
       cancelButtonText: '取消',

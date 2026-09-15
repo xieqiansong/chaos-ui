@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import type { User, UserQuery } from '@/types/user'
 import type { PageResult } from '@/types/pagination'
 import { batchDeleteUsers, deleteUser, fetchUsers } from '@/api/user'
 import { formatDateTime } from '@/utils/format'
 import UserFormDialog from '@/components/UserFormDialog.vue'
+import { confirm, showSuccess } from '@/utils/message'
 
 const loading = ref(false)
 const list = ref<User[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(10)
+// 请求失败时的错误提示；非空时表格区展示「重试」状态
+const error = ref<string | null>(null)
+// 删除中状态：用于按钮 loading 防重复点击（整批 / 单行）
+const deleting = ref(false)
+const deletingId = ref<number | null>(null)
 
 const form = reactive<UserQuery>({
   username: '',
@@ -29,6 +34,7 @@ watch(dateRange, (val) => {
 
 async function load() {
   loading.value = true
+  error.value = null
   try {
     const res: PageResult<User> = await fetchUsers({
       page: page.value,
@@ -40,6 +46,9 @@ async function load() {
     })
     list.value = res.items
     total.value = res.total
+  } catch (e) {
+    // 全局拦截器已弹 toast；此处仅记录错误信息，供视图内「重试」状态使用
+    error.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -93,19 +102,23 @@ function openEdit(id: number) {
 
 async function handleDelete(row: User) {
   try {
-    await ElMessageBox.confirm(`确定删除用户「${row.username}」吗？`, '提示', {
-      type: 'warning',
-    })
+    await confirm(`确定删除用户「${row.username}」吗？`)
   } catch {
     return
   }
-  await deleteUser(row.id)
-  ElMessage.success('删除成功')
-  // 若删完当前页只剩这一条且不是第一页，回退一页
-  if (list.value.length === 1 && page.value > 1) {
-    page.value -= 1
+  // 标记该行为删除中，禁用其删除按钮，防重复点击
+  deletingId.value = row.id
+  try {
+    await deleteUser(row.id)
+    showSuccess('删除成功')
+    // 若删完当前页只剩这一条且不是第一页，回退一页
+    if (list.value.length === 1 && page.value > 1) {
+      page.value -= 1
+    }
+    await load()
+  } finally {
+    deletingId.value = null
   }
-  load()
 }
 
 // 批量删除：收集选中行，调用批量接口
@@ -120,20 +133,23 @@ async function handleBatchDelete() {
   const ids = selectedRows.value.map((r) => r.id)
   if (!ids.length) return
   try {
-    await ElMessageBox.confirm(`确定删除选中的 ${ids.length} 个用户吗？`, '提示', {
-      type: 'warning',
-    })
+    await confirm(`确定删除选中的 ${ids.length} 个用户吗？`)
   } catch {
     return
   }
-  const { deleted } = await batchDeleteUsers(ids)
-  ElMessage.success(`已删除 ${deleted} 条`)
-  // 若删空了当前页且不是第一页，回退一页
-  if (list.value.length === ids.length && page.value > 1) {
-    page.value -= 1
+  deleting.value = true
+  try {
+    const { deleted } = await batchDeleteUsers(ids)
+    showSuccess(`已删除 ${deleted} 条`)
+    // 若删空了当前页且不是第一页，回退一页
+    if (list.value.length === ids.length && page.value > 1) {
+      page.value -= 1
+    }
+    tableRef.value?.clearSelection()
+    await load()
+  } finally {
+    deleting.value = false
   }
-  tableRef.value?.clearSelection()
-  load()
 }
 
 onMounted(load)
@@ -151,11 +167,12 @@ onMounted(load)
             v-model="form.username"
             placeholder="请输入用户名"
             clearable
+            :disabled="loading"
             @keyup.enter="handleSearch"
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="form.status" placeholder="全部" clearable style="width: 120px">
+          <el-select v-model="form.status" placeholder="全部" clearable style="width: 120px" :disabled="loading">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="0" />
           </el-select>
@@ -168,11 +185,12 @@ onMounted(load)
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
+            :disabled="loading"
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" :loading="loading" :disabled="loading" @click="handleSearch">搜索</el-button>
+          <el-button :disabled="loading" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -183,42 +201,73 @@ onMounted(load)
         <el-button type="primary" @click="openAdd">新增用户</el-button>
         <el-button
           type="danger"
-          :disabled="selectedRows.length === 0"
+          :loading="deleting"
+          :disabled="deleting || selectedRows.length === 0"
           @click="handleBatchDelete"
         >
           批量删除（{{ selectedRows.length }}）
         </el-button>
       </div>
-      <el-table
-        ref="tableRef"
-        v-loading="loading"
-        :data="list"
-        border
-        style="width: 100%"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="nickname" label="昵称" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'info'">{{ enabledText(row.enabled) }}</el-tag>
+
+      <!-- 加载 / 空 / 错误 三态：v-loading 覆盖整个表格区 -->
+      <div v-loading="loading" class="table-wrap">
+        <!-- 错误态：展示错误信息 + 重试按钮 -->
+        <el-result
+          v-if="error && !loading"
+          icon="error"
+          title="加载失败"
+          :sub-title="error"
+          class="state-block"
+        >
+          <template #extra>
+            <el-button type="primary" @click="load">重试</el-button>
           </template>
-        </el-table-column>
-        <el-table-column label="创建时间">
-          <template #default="{ row }">
-            {{ formatDateTime(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="openEdit(row.id)">编辑</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        </el-result>
+
+        <!-- 数据态 -->
+        <el-table
+          v-else-if="list.length > 0"
+          ref="tableRef"
+          :data="list"
+          border
+          style="width: 100%"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="username" label="用户名" />
+          <el-table-column prop="nickname" label="昵称" />
+          <el-table-column prop="email" label="邮箱" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.enabled ? 'success' : 'info'">{{ enabledText(row.enabled) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" size="small" @click="openEdit(row.id)">编辑</el-button>
+              <el-button
+                link
+                type="danger"
+                size="small"
+                :loading="deletingId === row.id"
+                :disabled="deletingId === row.id"
+                @click="handleDelete(row)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 空态 -->
+        <el-empty v-else description="暂无用户数据" class="state-block" />
+      </div>
 
       <div class="pager">
         <el-pagination
@@ -247,6 +296,12 @@ onMounted(load)
 }
 .toolbar {
   margin-bottom: 16px;
+}
+.table-wrap {
+  min-height: 240px;
+}
+.state-block {
+  margin: 40px 0;
 }
 .pager {
   margin-top: 16px;
