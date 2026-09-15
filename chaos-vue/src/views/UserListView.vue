@@ -5,7 +5,11 @@ import type { PageResult } from '@/types/pagination'
 import { batchDeleteUsers, deleteUser, fetchUsers } from '@/api/user'
 import { formatDateTime } from '@/utils/format'
 import UserFormDialog from '@/components/UserFormDialog.vue'
+import DictTag from '@/components/DictTag.vue'
+import { useDictStore } from '@/stores/dict'
 import { confirm, showSuccess } from '@/utils/message'
+
+const dictStore = useDictStore()
 
 const loading = ref(false)
 const list = ref<User[]>([])
@@ -36,6 +40,8 @@ async function load() {
   loading.value = true
   error.value = null
   try {
+    // 预拉取字典，保证表格 DictTag 与筛选下拉在渲染时已有数据
+    await dictStore.load('user-status')
     const res: PageResult<User> = await fetchUsers({
       page: page.value,
       size: size.value,
@@ -80,10 +86,6 @@ function handleSizeChange(s: number) {
   size.value = s
   page.value = 1
   load()
-}
-
-function enabledText(enabled: boolean) {
-  return enabled ? '启用' : '禁用'
 }
 
 // 新增 / 编辑弹窗
@@ -173,8 +175,12 @@ onMounted(load)
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="form.status" placeholder="全部" clearable style="width: 120px" :disabled="loading">
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
+            <el-option
+              v-for="opt in dictStore.get('user-status')"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="创建时间">
@@ -240,7 +246,7 @@ onMounted(load)
           <el-table-column prop="email" label="邮箱" />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.enabled ? 'success' : 'info'">{{ enabledText(row.enabled) }}</el-tag>
+              <DictTag dict="user-status" :value="row.enabled ? 1 : 0" />
             </template>
           </el-table-column>
           <el-table-column label="创建时间">

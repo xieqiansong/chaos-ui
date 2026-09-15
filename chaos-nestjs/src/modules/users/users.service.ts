@@ -5,6 +5,7 @@ import { User } from './user.entity'
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto'
 import { UserQueryDto } from './dto/user-query.dto'
 import { PageResult } from '../../common/pagination/page-result.interface'
+import { UserStatus } from '../../common/enums/user-status.enum'
 
 @Injectable()
 export class UsersService {
@@ -27,7 +28,7 @@ export class UsersService {
       qb.andWhere('user.username LIKE :username', { username: `%${username}%` })
     }
     if (status !== undefined && status !== null) {
-      qb.andWhere('user.enabled = :enabled', { enabled: status === 1 })
+      qb.andWhere('user.enabled = :enabled', { enabled: status === UserStatus.ENABLED })
     }
     if (startDate) {
       qb.andWhere('user.createdAt >= :startDate', { startDate: `${startDate} 00:00:00` })
