@@ -1,8 +1,6 @@
 # chaos-ui
 
-前端学习项目，包含**单一 git 仓库下的两个边界清晰的子项目**：前端 `chaos-vue` 与配套后端 `chaos-nestjs`。二者在同一仓库中并排放置，但各自是独立的 npm 工程（独立依赖、构建、测试），仅通过 HTTP 接口协作。
-
-> **仓库结构说明**：历史上是两个独立的 git 仓库，现已合并为 `chaos-ui` 一个仓库统一版本控制；**工程边界保持不变**——前后端不互相引用源码、不共享 `node_modules`，各自拥有 `package.json` / `tsconfig` / `AGENTS.md` / `README.md` / `.gitignore`，可独立安装、构建与运行。
+前端学习项目，包含**单一 git 仓库下的两个边界清晰的子项目**：前端 `chaos-vue` 与配套后端 `chaos-nestjs`。二者在同一仓库中并排放置，但各自是独立的 npm 工程（独立依赖、构建、测试），仅通过 HTTP 接口协作。**工程边界**：前后端不互相引用源码、不共享 `node_modules`，各自拥有 `package.json` / `tsconfig` / `AGENTS.md` / `README.md` / `.gitignore`，可独立安装、构建与运行。
 
 ## 组成
 

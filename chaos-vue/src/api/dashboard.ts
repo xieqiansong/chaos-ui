@@ -1,11 +1,18 @@
 import { get } from '@/utils/request'
 
-/** 仪表盘统计：与 chaos-nestjs DashboardStats 对齐（仅真实可计算指标） */
+/** 单日新增趋势条目，对齐 chaos-nestjs DashboardTrendItem */
+export interface DashboardTrendItem {
+  date: string
+  count: number
+}
+
+/** 仪表盘统计，对齐 chaos-nestjs DashboardStats */
 export interface DashboardStats {
   userCount: number
   enabledUserCount: number
   disabledUserCount: number
   todayUserCount: number
+  trend: DashboardTrendItem[]
 }
 
 /** 获取仪表盘统计：GET /api/dashboard/stats */
