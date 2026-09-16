@@ -52,6 +52,16 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // 用户详情：从列表页带 id 跳转；hidden 使其不出现在侧边栏菜单
+        path: 'users/:id',
+        name: 'user-detail',
+        component: () => import('@/views/UserDetailView.vue'),
+        meta: {
+          title: '用户详情',
+          hidden: true,
+        },
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('@/views/ProfileSettingsView.vue'),

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import type { User, UserQuery } from '@/types/user'
 import type { PageResult } from '@/types/pagination'
 import { batchDeleteUsers, deleteUser, fetchUsers } from '@/api/user'
@@ -15,6 +16,7 @@ import { Download, Setting, Upload } from '@element-plus/icons-vue'
 
 const dictStore = useDictStore()
 const userStore = useUserStore()
+const router = useRouter()
 
 const loading = ref(false)
 const list = ref<User[]>([])
@@ -113,6 +115,11 @@ function openAdd() {
 function openEdit(id: number) {
   editingId.value = id
   dialogVisible.value = true
+}
+
+// 跳转详情页（带 id）
+function openDetail(id: number) {
+  router.push(`/users/${id}`)
 }
 
 async function handleDelete(row: User) {
@@ -418,6 +425,7 @@ onMounted(load)
           </el-table-column>
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
+              <el-button link type="primary" size="small" @click="openDetail(row.id)">详情</el-button>
               <el-button link type="primary" size="small" @click="openEdit(row.id)">编辑</el-button>
               <el-button
                 link
