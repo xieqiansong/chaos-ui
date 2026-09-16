@@ -14,8 +14,8 @@ build/
 *.sqlite3
 *.db
 
-# 上传文件目录（运行时生成）
-uploads/
+# 上传文件目录（运行时生成，仅忽略项目根 uploads/；源码目录 src/modules/uploads/ 需入库，故用前导斜杠锚定根）
+/uploads/
 
 # logs
 *.log
