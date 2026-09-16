@@ -43,7 +43,8 @@ export class UploadsController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: () => UPLOAD_DIR,
+        // destination 传字符串（目录）即可；若传函数必须调用 cb(err, dir)，否则 multer 永久等待导致请求挂起
+        destination: UPLOAD_DIR,
         filename: (_req, file, cb) => {
           const ext = extname(file.originalname)
           const rand = Math.random().toString(36).slice(2, 8)
