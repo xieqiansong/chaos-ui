@@ -5,6 +5,7 @@ import { User } from '../users/user.entity'
 import { LoginDto } from './dto/login.dto'
 import { hashPassword, verifyPassword } from '../../common/auth/password'
 import { signJwt } from '../../common/auth/jwt'
+import { getUserPermissions } from '../../common/permissions'
 
 export interface LoginResult {
   token: string
@@ -12,6 +13,8 @@ export interface LoginResult {
     id: number
     username: string
     nickname: string
+    /** 权限码集合，供前端按钮级权限控制（v-permission）使用 */
+    permissions: string[]
   }
 }
 
@@ -47,7 +50,12 @@ export class AuthService implements OnModuleInit {
   ): Promise<LoginResult['user'] | null> {
     const user = await this.userRepository.findOne({ where: { username } })
     if (!user || !verifyPassword(password, user.password)) return null
-    return { id: user.id, username: user.username, nickname: user.nickname }
+    return {
+      id: user.id,
+      username: user.username,
+      nickname: user.nickname,
+      permissions: getUserPermissions(user.username),
+    }
   }
 
   async login(dto: LoginDto): Promise<LoginResult> {

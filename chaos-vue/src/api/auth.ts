@@ -22,6 +22,8 @@ export interface UserInfo {
   address?: string
   /** 扩展资料 */
   extra?: Record<string, unknown>
+  /** 权限码集合（按钮级权限控制用） */
+  permissions?: string[]
 }
 
 export interface LoginResult {

@@ -10,6 +10,7 @@ import DictTag from '@/components/DictTag.vue'
 import { useDictStore } from '@/stores/dict'
 import { useUserStore } from '@/stores/user'
 import { confirm, showError, showSuccess } from '@/utils/message'
+import { PERMISSIONS } from '@/constants/permission'
 import request from '@/utils/request'
 import * as XLSX from 'xlsx'
 import { Download, Setting, Upload } from '@element-plus/icons-vue'
@@ -311,9 +312,10 @@ onMounted(load)
     <!-- 表格 + 分页 -->
     <el-card class="table-card" shadow="never">
       <div class="toolbar">
-        <el-button type="primary" @click="openAdd">新增用户</el-button>
+        <el-button type="primary" v-permission="PERMISSIONS.USER_CREATE" @click="openAdd">新增用户</el-button>
         <el-button
           type="danger"
+          v-permission="PERMISSIONS.USER_DELETE"
           :loading="deleting"
           :disabled="deleting || selectedRows.length === 0"
           @click="handleBatchDelete"
@@ -321,10 +323,10 @@ onMounted(load)
           批量删除（{{ selectedRows.length }}）
         </el-button>
         <!-- 导出 / 导入（#13） -->
-        <el-button :icon="Download" :loading="exportingClient" @click="exportClient">
+        <el-button v-permission="PERMISSIONS.USER_EXPORT" :icon="Download" :loading="exportingClient" @click="exportClient">
           导出 Excel（前端）
         </el-button>
-        <el-button :icon="Download" :loading="exportingServer" @click="exportServer">
+        <el-button v-permission="PERMISSIONS.USER_EXPORT" :icon="Download" :loading="exportingServer" @click="exportServer">
           导出（后端）
         </el-button>
         <el-upload
@@ -336,7 +338,7 @@ onMounted(load)
           :on-success="handleImportSuccess"
           :on-error="handleImportError"
         >
-          <el-button :icon="Upload">导入</el-button>
+          <el-button v-permission="PERMISSIONS.USER_IMPORT" :icon="Upload">导入</el-button>
         </el-upload>
         <!-- 列显示 / 隐藏控制 -->
         <el-popover title="列设置" placement="bottom" :width="160" trigger="click">
@@ -426,11 +428,12 @@ onMounted(load)
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="openDetail(row.id)">详情</el-button>
-              <el-button link type="primary" size="small" @click="openEdit(row.id)">编辑</el-button>
+              <el-button link type="primary" size="small" v-permission="PERMISSIONS.USER_EDIT" @click="openEdit(row.id)">编辑</el-button>
               <el-button
                 link
                 type="danger"
                 size="small"
+                v-permission="PERMISSIONS.USER_DELETE"
                 :loading="deletingId === row.id"
                 :disabled="deletingId === row.id"
                 @click="handleDelete(row)"
