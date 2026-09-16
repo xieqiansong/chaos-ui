@@ -35,7 +35,7 @@
 - 列表请求参数用 `page` / `size`（**不是** `pageSize`），由 `src/types/pagination.ts` 的 `PageQuery` 定义，`page`/`size` 可选（缺省由后端套默认值）。
 - 列表响应结构为 `{ items, total, page, size }`（`PageResult<T>`），对应 chaos-lib `pagination.Result` 的字段；**不要用 `list`**。
 - 页面查询参数统一形如 `{ page, size, ...搜索条件 }`，搜索时重置 `page=1` 再请求。
-- 当前列表接口用 `src/api/*.ts` 里的假数据占位；接入真实后端时改为调用 `request.ts` 的 `get/post` 并删除 mock。
+- **全部接口已由 chaos-nestjs 实现**：`src/api/*.ts` 直接调用真实后端（登录、用户 CRUD、批量删、导出/导入、字典、文件上传、仪表盘统计、个人资料 GET/PUT `/users/me`），无前端 mock 数据；不要回流到假数据占位。
 - 错误在拦截器统一 `console.error` 并 reject；业务层捕获后给用户提示，勿静默吞掉。
 
 ## 路由（`src/router/index.ts`）

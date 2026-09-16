@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { loginApi, type LoginParams, type LoginResult } from '@/api/auth'
+import { loginApi, type LoginParams, type LoginResult, type UserInfo } from '@/api/auth'
 
 const TOKEN_KEY = 'token'
 
@@ -31,7 +31,13 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
   }
 
-  return { token, userInfo, isLoggedIn, setToken, login, logout }
+  /** 局部更新用户信息（如个人资料保存后同步昵称 / 头像等） */
+  function patchUserInfo(patch: Partial<UserInfo>) {
+    if (!userInfo.value) userInfo.value = patch as UserInfo
+    else userInfo.value = { ...userInfo.value, ...patch }
+  }
+
+  return { token, userInfo, isLoggedIn, setToken, login, logout, patchUserInfo }
 })
 
 export type UserStore = ReturnType<typeof useUserStore>

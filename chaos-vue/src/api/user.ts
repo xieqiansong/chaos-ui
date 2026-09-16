@@ -1,5 +1,6 @@
 import type {
   CreateUserPayload,
+  UpdateProfilePayload,
   UpdateUserPayload,
   User,
   UserQuery,
@@ -41,4 +42,14 @@ export function deleteUser(id: number): Promise<void> {
 /** 批量删除用户：DELETE /api/users，body { ids: number[] } */
 export function batchDeleteUsers(ids: number[]): Promise<{ deleted: number }> {
   return del<{ deleted: number }>('/users', { data: { ids } })
+}
+
+/** 获取当前登录用户资料：GET /api/users/me（后端裁剪 password） */
+export function getUserProfile(): Promise<User> {
+  return get<User>('/users/me')
+}
+
+/** 更新当前登录用户资料：PUT /api/users/me */
+export function updateProfile(payload: UpdateProfilePayload): Promise<User> {
+  return put<User>('/users/me', payload)
 }

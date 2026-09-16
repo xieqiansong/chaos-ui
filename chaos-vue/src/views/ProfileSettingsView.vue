@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormItemRule, FormRules, UploadProps, UploadUserFile } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useDictStore } from '@/stores/dict'
+import { getUserProfile, updateProfile } from '@/api/user'
+import type { UpdateProfilePayload } from '@/types/user'
 import { showError, showSuccess } from '@/utils/message'
 import { Plus, Upload } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
+const dictStore = useDictStore()
 
 // 基础信息：预填当前登录用户
 const form = reactive({
@@ -19,15 +23,15 @@ const form = reactive({
   confirmPassword: '',
 })
 
-// ---------- 联动：省 → 市 ----------
-// 真实项目应来自字典 / 接口；此处用本地数据演示「A 变化 → B 的选项变化 + 重置」
-const regionData: Record<string, string[]> = {
-  广东省: ['广州市', '深圳市', '珠海市'],
-  浙江省: ['杭州市', '宁波市', '温州市'],
-  四川省: ['成都市', '绵阳市', '宜宾市'],
-}
-const provinceOptions = Object.keys(regionData)
-const cityOptions = computed(() => regionData[form.province] ?? [])
+// ---------- 联动：省 → 市（字典驱动，单一真源在后端 /api/dicts/region） ----------
+// 省份选项来自 region 字典；城市选项随省份变化，取该省 children
+const provinceOptions = computed(() =>
+  dictStore.get('region').map((p) => ({ label: p.label, value: p.value })),
+)
+const cityOptions = computed(() => {
+  const province = dictStore.get('region').find((p) => p.value === form.province)
+  return (province?.children ?? []).map((c) => ({ label: c.label, value: c.value }))
+})
 
 // 省份变化：清空已选城市（避免残留无效值）
 function onProvinceChange() {
@@ -147,16 +151,59 @@ async function handleSave() {
   if (!valid) return
   saving.value = true
   try {
-    // 真实项目此处调用「更新资料」接口；上传已在各自 on-success 中先拿到 URL，
-    // 这里直接随表单一起提交（先传文件拿 URL，再提交表单）
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    const payload = { ...form, ...extraForm, avatar: avatarUrl.value, attachments: attachUrls.value }
-    console.log('保存资料：', payload)
+    // 上传已在各自 on-success 中先拿到 URL；这里随表单一起提交到 /api/users/me
+    const payload: UpdateProfilePayload = {
+      nickname: form.nickname,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      province: form.province || undefined,
+      city: form.city || undefined,
+      address: form.address || undefined,
+      avatar: avatarUrl.value || undefined,
+      // 仅在填写时更新密码（后端会重新哈希）
+      password: form.password ? form.password : undefined,
+      // 动态表单字段与附件 URL 统一存进 extra
+      extra: {
+        website: extraForm.website,
+        gender: extraForm.gender,
+        bio: extraForm.bio,
+        attachments: attachUrls.value,
+      },
+    }
+    const updated = await updateProfile(payload)
     showSuccess('资料保存成功')
+    // 同步到全局用户状态（顶栏昵称 / 头像等）
+    userStore.patchUserInfo(updated)
+    form.password = ''
+    form.confirmPassword = ''
+  } catch {
+    // 拦截器已提示
   } finally {
     saving.value = false
   }
 }
+
+// 进入页面：拉取 region 字典 + 当前用户完整资料用于回显
+onMounted(async () => {
+  await dictStore.load('region').catch(() => {})
+  try {
+    const profile = await getUserProfile()
+    form.nickname = profile.nickname ?? form.nickname
+    form.email = profile.email ?? ''
+    form.phone = profile.phone ?? ''
+    form.province = profile.province ?? ''
+    form.city = profile.city ?? ''
+    form.address = profile.address ?? ''
+    avatarUrl.value = profile.avatar ?? ''
+    const extra = (profile.extra ?? {}) as Record<string, unknown>
+    extraForm.website = (extra.website as string) ?? ''
+    extraForm.gender = (extra.gender as string) ?? ''
+    extraForm.bio = (extra.bio as string) ?? ''
+    attachUrls.value = Array.isArray(extra.attachments) ? (extra.attachments as string[]) : []
+  } catch {
+    // 拦截器已提示；保留默认预填值
+  }
+})
 </script>
 
 <template>

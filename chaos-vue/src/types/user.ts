@@ -3,6 +3,7 @@ import type { PageQuery } from './pagination'
 /**
  * 用户实体，字段对齐 chaos-nestjs 后端 User 实体。
  * createdAt / updatedAt 由 TypeORM 序列化为字符串。
+ * 后端返回的公开用户结构已剥离 password 字段。
  */
 export interface User {
   id: number
@@ -11,8 +12,36 @@ export interface User {
   email?: string
   /** 是否启用：true 启用 / false 禁用（对应后端的 enabled 字段） */
   enabled: boolean
+  // ---------- 个人资料扩展字段（与后端 User 实体对齐） ----------
+  /** 头像 URL */
+  avatar?: string
+  /** 手机号 */
+  phone?: string
+  /** 省份 */
+  province?: string
+  /** 城市 */
+  city?: string
+  /** 详细地址 */
+  address?: string
+  /** 扩展资料（动态表单字段 + 附件 URL 等） */
+  extra?: Record<string, unknown>
   createdAt: string
   updatedAt: string
+}
+
+/** 个人资料更新提交数据，对齐后端 UpdateProfileDto（username/enabled 不可改） */
+export interface UpdateProfilePayload {
+  nickname?: string
+  email?: string
+  phone?: string
+  province?: string
+  city?: string
+  address?: string
+  avatar?: string
+  /** 留空表示不修改密码 */
+  password?: string
+  /** 动态表单字段与附件 URL 等 */
+  extra?: Record<string, unknown>
 }
 
 /** 用户列表查询参数：分页 + 搜索条件，与后端 UserQueryDto 对齐 */

@@ -19,9 +19,11 @@ import { memoryStorage } from 'multer'
 import * as XLSX from 'xlsx'
 import { UsersService } from './users.service'
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto'
+import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UserQueryDto } from './dto/user-query.dto'
 import { BatchDeleteDto } from './dto/batch-delete.dto'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { AuthUser } from '../auth/auth-user.decorator'
 
 // multer 2.x 不再补充 Express.Multer 命名空间，这里用最小兼容类型
 interface UploadedFile {
@@ -52,9 +54,26 @@ export class UsersController {
     return this.usersService.findAll(query)
   }
 
+  // 当前用户资料：GET /api/users/me（需登录），静态路由须置于 :id 之前
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getProfile(@AuthUser() user: { id: number }) {
+    return this.usersService.getProfile(user.id)
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id)
+  }
+
+  // 更新当前用户资料：PUT /api/users/me（需登录）
+  @Put('me')
+  @UseGuards(JwtAuthGuard)
+  updateProfile(
+    @AuthUser() user: { id: number },
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateProfile(user.id, dto)
   }
 
   @Put(':id')

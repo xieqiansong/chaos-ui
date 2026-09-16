@@ -10,6 +10,18 @@ export interface UserInfo {
   username: string
   nickname: string
   email?: string
+  /** 头像 URL */
+  avatar?: string
+  /** 手机号 */
+  phone?: string
+  /** 省份 */
+  province?: string
+  /** 城市 */
+  city?: string
+  /** 详细地址 */
+  address?: string
+  /** 扩展资料 */
+  extra?: Record<string, unknown>
 }
 
 export interface LoginResult {
